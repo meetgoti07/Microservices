@@ -1,0 +1,134 @@
+version: "3.8"
+
+services:
+  # Databases
+  postgres-auth:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  postgres-menu:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: menu_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+
+  mongodb:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+
+  mysql:
+    image: mysql:9
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: queue_db
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+
+  # Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+
+  # Services
+  auth-service:
+    build: ./services/auth
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres-auth
+      - redis
+
+  menu-service:
+    build: ./services/menu
+    ports:
+      - "3002:3002"
+      - "50051:50051" # gRPC
+    depends_on:
+      - postgres-menu
+      - kafka
+
+  order-service:
+    build: ./services/order
+    ports:
+      - "3003:3003"
+    depends_on:
+      - mongodb
+      - redis
+      - kafka
+
+  queue-service:
+    build: ./services/queue
+    ports:
+      - "3004:3004"
+    depends_on:
+      - mysql
+      - redis
+      - kafka
+
+  notification-service:
+    build: ./services/notification
+    ports:
+      - "3005:3005"
+    depends_on:
+      - redis
+      - kafka
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - nginx
+
+  # API Gateway
+  nginx:
+    build: ./nginx
+    ports:
+      - "8080:80"
+      - "8081:8081" # Metrics endpoint
+    volumes:
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - auth-service
+      - menu-service
+      - order-service
+      - queue-service
+      - notification-service
+      - frontend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  nginx_cache:
+
+networks:
+  app-network:
+    driver: bridge
