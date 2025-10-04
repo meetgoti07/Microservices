@@ -1,6 +1,27 @@
 {
-	"dependencies": {
-		"fastify": "^5.6.1"
-	},
-	"type": "module"
+  "name": "notification-service",
+  "version": "1.0.0",
+  "description": "Real-time notification service with WebSocket, Redis, and Kafka",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test:kafka": "node test-kafka.js",
+    "kafka:test": "node kafka-admin.js test",
+    "kafka:create": "node kafka-admin.js create",
+    "kafka:list": "node kafka-admin.js list",
+    "kafka:delete": "node kafka-admin.js delete"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.1",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.1",
+    "fastify-socket.io": "^5.1.0",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.13.1",
+    "pino-pretty": "^13.0.0",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.1"
+  }
 }

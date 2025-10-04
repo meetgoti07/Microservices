@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  # ==========================================
+  # API GATEWAY (NGINX ONLY)
+  # ==========================================
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-gateway
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+      - "${NGINX_METRICS_PORT:-8081}:8081"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+      - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
+    networks:
+      - app-network
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  nginx_cache:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
